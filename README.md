@@ -1,36 +1,34 @@
-# TradingView → Telegram intraday alerts
+# PRATAMA SCREENING
 
-Starter kit for alerts only. It does not place or manage broker orders. Pine indicator signals are designed for a 5-minute chart, filtered by the 15-minute EMA, VWAP, relative volume, volatility, and a recent-bar stop structure. Short alerts are disabled by default. Configure the session input for the exchange and asset you are charting.
+Static market screener for GitHub Pages. No Python server, build tools, or TradingView dependency. Files in this folder can be uploaded directly to the root of a GitHub repository.
 
-## Files
+## Publish on GitHub Pages
 
-- `alert.pine`: Pine Script v6 indicator. Add it to TradingView Pine Editor, save, and add it to a 5-minute chart.
-- `relay.py`: HTTPS webhook receiver that forwards accepted JSON alerts to Telegram.
-- `worker.js` and `wrangler.toml`: Cloudflare Workers version of the webhook relay (recommended free hosting option).
-- `.env.example`: required environment variables; copy it to `.env` locally and fill in your own values. Never commit `.env`.
+1. Create a GitHub repository, for example `pratama-screening`.
+2. Upload `index.html`, `styles.css`, `app.js`, and this README to the repository root.
+3. Open **Settings → Pages**. Under **Build and deployment**, choose **Deploy from a branch**, select `main` and `/(root)`, then save.
+4. Open the Pages URL GitHub shows after deployment.
+5. In the site, click **Data & API**, enter a Twelve Data API key, then choose **Simpan & sambungkan**.
 
-## Recommended free hosting: Cloudflare Workers
+Crypto uses Binance's public market data endpoints and does not need a key. Stocks and XAU/USD use Twelve Data. The key is saved only in the browser's local storage and is not embedded in these files. Anyone using a public deployment must enter their own API key. Never commit a personal key into this repository.
 
-The Cloudflare Worker accepts a TradingView webhook and sends the Telegram request in the background so it can acknowledge TradingView promptly. The Workers Free plan currently includes up to 100,000 requests per day. The free tier and limits can change; check Cloudflare's current pricing before relying on it for critical alerts.
+## Markets and timeframes
 
-1. Upload this folder to a GitHub repository. Do not commit a filled-in `.env` file or any tokens.
-2. In Cloudflare, create a Worker using **Workers Builds** and connect the GitHub repository. Set the root directory to `outputs/tradingview-telegram-bot` if that is where this folder lives in your repository. The `wrangler.toml` file configures the entry point.
-3. In the Worker settings, add these as secrets/environment variables: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `WEBHOOK_SECRET`.
-4. Deploy and check `https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev/health` for `{"status":"ok"}`.
-5. In TradingView's alert webhook URL, use `https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev/webhook/YOUR_WEBHOOK_SECRET`.
+- Indonesia stocks: BBCA, BBRI, BMRI, TLKM, ASII, ANTM, GOTO, BREN · D1.
+- US stocks: AAPL, MSFT, NVDA, AMZN, GOOGL, META, TSLA, AMD · D1.
+- Crypto: BTC, ETH, BNB, SOL, XRP against USDT · M15.
+- XAU/USD: M5 only, for the requested scalping workflow.
 
-Cloudflare's GitHub integration can deploy a Worker when you push changes. Cloudflare Workers is not a Python host, so deploy `worker.js` there; `relay.py` is for Python application hosts.
+The screener calculates EMA 9/21, RSI 14, and ATR 14 from returned candles. Click an instrument row to select it in the built-in canvas candlestick chart. The chart overlays EMA 9/21 and the active entry, stop, and target levels. No charting library or TradingView component is used.
 
-## Setup
+When EMA/RSI conditions produce BUY or SELL, the entry reference is the latest feed price. The indicative stop is 1.5 × ATR(14) from entry and the target is 3 × ATR(14), a nominal 1:2 risk/reward distance before spread and execution costs. WAIT shows no trade levels. ATR is a volatility measure derived from true range, which includes the current high/low and previous close. These are example rule-based levels, not personalized trade instructions. See [True Range formula](https://chartschool.stockcharts.com/table-of-contents/technical-indicators-and-overlays/technical-indicators/true-range).
 
-1. Create a Telegram bot with `@BotFather`, then send it a message from the destination account or group. Obtain the bot token and chat ID using your preferred secure method.
-2. Deploy `relay.py` on a public HTTPS host. Set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and a long random `WEBHOOK_SECRET` as host secrets. Install `requirements.txt` and run `uvicorn relay:app --host 0.0.0.0 --port 8000` behind the host's HTTPS proxy.
-3. Verify the public `/health` endpoint returns `{"status":"ok"}`.
-4. In TradingView, create an alert for the indicator and select **Any alert() function call**. Set the webhook URL to `https://YOUR-HOST/webhook/YOUR_WEBHOOK_SECRET`. The Pine script sends JSON in the alert body.
-5. Start with one liquid symbol and paper review. Check the feed/source on the chart and compare every alert with your broker's live price, spread, and liquidity. Close positions before the same session ends; the alert script does not force-close positions.
+Price, chart, and signal rows remain empty when a provider cannot return data; the page never substitutes generated/demo prices.
 
-TradingView webhook alerts require an eligible account/configuration and two-factor authentication. TradingView requires a reachable HTTPS endpoint and may reject slow endpoints, so the relay responds only after Telegram accepts the message. Never put the Telegram bot token in the TradingView alert URL or Pine script. The webhook path secret is still sensitive: keep the alert private and rotate it if exposed.
+## Real-time and licensing notes
 
-## Signal limits
+Real-time availability depends on the data provider, account plan, symbol, exchange, and market-data permissions. Twelve Data documents real-time WebSocket quotes, while its current stock-market listing identifies Indonesia as EOD/delayed on its international coverage. Public IDX display also has licensing restrictions: the IDX terms say internet display of real-time IDX data is restricted to authorized users, and public display without that access is to be delayed/EOD. Therefore this site labels the Indonesia feed as provider/delay-dependent and does not claim public IDX real-time data. Arrange an authorized real-time feed and user access with IDX or a licensed vendor if that is required.
 
-The indicator can alert on a confirmed 5-minute candle close. It cannot verify your broker's spread, account short permissions, transaction costs, exchange suspensions, breaking news, or whether the chart feed is real-time. Treat each alert as a conditional screening prompt, not a recommendation or guaranteed execution price. Any targets are calculated from the structure stop and do not include costs.
+Binance crypto streaming is real-time exchange data for those Binance spot pairs, not a consolidated price across all crypto exchanges. XAU/USD is the provider's gold spot quote and may differ from a broker's CFD quote. A static GitHub Pages site cannot keep provider API credentials secret from the browser user; the key is stored locally per browser, not included in the public site files.
+
+Sinyal bersifat informasional, bukan rekomendasi atau jaminan hasil trading. Perhatikan spread, slippage, jam perdagangan, lisensi data, dan risiko.
